@@ -1,6 +1,6 @@
 import React from "react";
 
-import renderer from "../core/render";
+import renderer from "../core";
 
 const Canvas = () => {
     const canvasRef = React.createRef<HTMLCanvasElement>();
