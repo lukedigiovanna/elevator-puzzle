@@ -37,23 +37,9 @@ class Engine {
 
     constructor() {
         this.renderLoop = this.renderLoop.bind(this);
-        this.building = new Building(100);
-        this.building.elevators.push({
-            currentHeight: 0,
-            currentLevel: 0,
-            reachableLevels: [0, 1, 2, 3, 4, 5],
-            speed: 1
-        });
-        this.building.elevators.push({
-            currentHeight: 2,
-            currentLevel: 2,
-            reachableLevels: [0, 1, 2, 3, 4, 5],
-            speed: 1
-        });
-        this.building.elevators.push({
-            currentHeight: 4,
-            currentLevel: 4,
-            reachableLevels: [0, 1, 2, 3, 4, 5],
+        this.building = new Building(5);
+        this.building.addElevator({
+            startingLevel: 0,
             speed: 1
         });
     }
@@ -70,6 +56,11 @@ class Engine {
 
         this.canvas.addEventListener("wheel", (ev) => {
             this.y = Math.max(this.y - ev.deltaY, 0);
+        })
+
+        this.canvas.addEventListener('mousedown', (ev) => {
+            this.building.elevators[0].targetLevel = (this.building.elevators[0].targetLevel + 1) % this.building.height;
+            console.log('click');
         })
 
         this.initialized = true;
@@ -105,6 +96,7 @@ class Engine {
         return this.running;
     }
 
+    private timeLastFrame: number | null = null;
     private renderLoop() {
         if (!this.canvas || !this.ctx) {
             throw Error("Attempting to render with error in initialization.");
@@ -113,6 +105,14 @@ class Engine {
         if (!this.running) {
             return;
         }
+
+        const timeNow = Date.now();
+        let dt = 0;
+        if (this.timeLastFrame) {
+            dt = (timeNow - this.timeLastFrame) / 1000.0;
+        }
+        this.timeLastFrame = timeNow;
+        this.building.update(dt);
 
         // Draw the background
         this.ctx.fillStyle = 'rgb(230, 230, 230)';
