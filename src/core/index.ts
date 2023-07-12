@@ -1,13 +1,19 @@
 import { Building } from "./elevators";
+import stickFigureSrc from "../assets/stickman.png";
+
+const STICK_FIGURE = new Image();
+STICK_FIGURE.src = stickFigureSrc;
 
 interface CustomContext extends CanvasRenderingContext2D {
     fillRoundedRect(x: number, y: number, width: number, height: number, radius: number): void;
+    strokeRoundedRect(x: number, y: number, width: number, height: number, radius: number): void;
+    fillEquilateralTriangle(x: number, y: number, size: number, flipVertically?: boolean): void;
 }
 
 function makeCustomContext(ctx: CanvasRenderingContext2D): CustomContext {
     const _this = ctx as CustomContext;
 
-    _this.fillRoundedRect = (x: number, y: number, width: number, height: number, radius: number) => {
+    const drawRoundedRect = (x: number, y: number, width: number, height: number, radius: number) => {
         _this.beginPath();
         _this.moveTo(x + radius, y);
         _this.lineTo(x + width - radius, y);
@@ -19,6 +25,30 @@ function makeCustomContext(ctx: CanvasRenderingContext2D): CustomContext {
         _this.lineTo(x, y + radius);
         _this.arcTo(x, y, x + radius, y, radius);
         _this.closePath();
+    }
+
+    _this.fillRoundedRect = (x: number, y: number, width: number, height: number, radius: number) => {
+        drawRoundedRect(x, y, width, height, radius);
+        _this.fill();
+    }
+
+    _this.strokeRoundedRect = (x: number, y: number, width: number, height: number, radius: number) => {
+        drawRoundedRect(x, y, width, height, radius);
+        _this.stroke();
+    }
+
+    _this.fillEquilateralTriangle = (x: number, y: number, size: number, flipVertically: boolean=false) => {
+        const height = (Math.sqrt(3) / 2) * size;
+  
+        const sign = flipVertically ? -1 : 1;
+        const offset = flipVertically ? height : 0;
+
+        _this.beginPath();
+        _this.moveTo(x, y + offset);
+        _this.lineTo(x + size / 2, y + sign * height + offset);
+        _this.lineTo(x - size / 2, y + sign * height + offset);
+        _this.closePath();
+  
         _this.fill();
     }
 
@@ -36,32 +66,38 @@ class Engine {
     private building: Building;
 
     constructor() {
-        this.renderLoop = this.renderLoop.bind(this);
-        this.building = new Building(5);
-        this.building.addElevator({
-            startingLevel: 0,
-            speed: 1
-        });
+        this.loop = this.loop.bind(this);
+        this.building = new Building(7);
+        for (let i = 0; i < 5; i++) {
+            this.building.addElevator({
+                startingLevel: i,
+                speed: 2
+            })
+        }
+        for (let i = 0; i < this.building.height - 1; i++) {
+            this.building.addPerson(0, i + 1);
+            this.building.addPerson(4, i + 1);
+        }
     }
 
     /**
      * Sets the canvas and generates a render context for it.
-     * Will compile necessary shaders and define buffers.
-     * @param canvas 
+     * @param canvas The canvas to this engine to render for.
      */
     setCanvas(canvas: HTMLCanvasElement) {
-        this.stopRendering();
+        this.stopLoop();
         this.canvas = canvas;
         this.ctx = makeCustomContext(this.canvas.getContext("2d") as CanvasRenderingContext2D);
 
         this.canvas.addEventListener("wheel", (ev) => {
             this.y = Math.max(this.y - ev.deltaY, 0);
-        })
+        });
 
         this.canvas.addEventListener('mousedown', (ev) => {
-            this.building.elevators[0].targetLevel = (this.building.elevators[0].targetLevel + 1) % this.building.height;
-            console.log('click');
-        })
+            for (const elevator of this.building.elevators) {
+                elevator.targetLevel = (elevator.targetLevel + 1) % this.building.height;
+            }
+        });
 
         this.initialized = true;
     }
@@ -70,34 +106,132 @@ class Engine {
      * Begins the render loop if it has not already begun.
      * If it has already begun, this function does nothing.
      */
-    render() {
+    startLoop() {
         if (!this.initialized) {
             throw Error("Trying to render an uninitialized renderer.");
         }
 
         if (!this.running) {
             this.running = true;
-            this.renderLoop();
+            this.loop();
         }
     }
 
     /**
-     * Will suspend the render loop temporarily.
+     * Will suspend the engine loop temporarily.
      */
-    stopRendering() {
+    stopLoop() {
         this.running = false;
     }
 
     /**
-     * Determins if this renderer is currently rendering.
-     * @returns True if this renderer is currently executing its render loop
+     * Determins if this engine is currently running.
+     * @returns True if this engine is currently executing its loop
      */
-    isRendering() {
+    isRunning() {
         return this.running;
     }
 
+    private renderBuildingRegular(ctx: CustomContext) {
+        if (!this.canvas) return;
+
+        // Draw level markers
+        const heightPerFloor = 240;
+        const base = 100;
+        const margin = 200;
+        
+        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#666';
+        ctx.fillRect(0, this.canvas.height - base + this.y - 1, this.canvas.width, 2);
+        
+        ctx.font = 'bold 85px sans-serif'
+        ctx.lineWidth = 4;
+        ctx.textAlign = 'center';
+        for (let i = 1; i <= this.building.height; i++) {
+            // draw floor marker
+            ctx.fillStyle = "#777";
+            const fy = this.canvas.height - base + this.y - i * heightPerFloor;
+            ctx.fillRect(margin, fy, this.canvas.width - margin * 2 - 1, 2);
+            
+            // draw text background
+            const str = i.toString();
+            ctx.fillStyle = 'rgb(225, 225, 225)';
+            const backgroundWidth = ctx.measureText(str).width + 50;
+            ctx.fillRect(margin + 20, this.canvas.height - base + this.y - i * heightPerFloor + 2, backgroundWidth, heightPerFloor - 4);
+            // draw floor number
+            ctx.fillStyle = '#ccc';
+            ctx.strokeStyle = '#bbb';
+            const ty = this.canvas.height - base + this.y - i * heightPerFloor + heightPerFloor / 2 + 20;
+            ctx.fillText(`${i}`, margin + 20 + backgroundWidth / 2, ty);
+            ctx.strokeText(`${i}`, margin + 20 + backgroundWidth / 2, ty);
+        }
+
+        const elevatorWidth = 140; // width of elevator
+        const elevatorHeight = heightPerFloor * 0.8;
+        const elevatorMargin = 20; // space around an elevator
+        const totWidth = elevatorWidth + elevatorMargin * 2;
+        let ex = this.canvas.width / 2 - (this.building.elevators.length * totWidth) / 2
+        for (const elevator of this.building.elevators) {
+            const ey = this.canvas.height - base + this.y - elevator.currentHeight * heightPerFloor - elevatorHeight;
+            
+            ctx.fillStyle = '#888';
+            ctx.fillRoundedRect(ex + elevatorMargin, ey, elevatorWidth, elevatorHeight, 15);
+            
+            ctx.fillStyle = '#bbb';
+            ctx.fillRect(ex + elevatorMargin, ey, elevatorWidth / 2 * elevator.doorStatus, elevatorHeight);
+            ctx.fillRect(ex + elevatorMargin + elevatorWidth / 2 + elevatorWidth / 2 * (1 - elevator.doorStatus), ey, elevatorWidth / 2 * elevator.doorStatus, elevatorHeight);
+            
+            ctx.fillStyle = '#777';
+            ctx.fillRect(ex + elevatorMargin + elevatorWidth / 2 * elevator.doorStatus, ey, 2, elevatorHeight);
+            ctx.fillRect(ex + elevatorMargin + elevatorWidth / 2 + elevatorWidth / 2 * (1 - elevator.doorStatus) - 2, ey, 2, elevatorHeight);
+            
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 8;
+            ctx.strokeRoundedRect(ex + elevatorMargin, ey, elevatorWidth, elevatorHeight, 15);
+
+            ex += totWidth;
+        }
+
+        // Draw people on each level
+        ctx.font = '34px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.lineWidth = 1;
+        // Stick figure's dimension is 308x811
+        const personHeight = 120;
+        const personWidth = 308 / 811 * personHeight;
+        const personMargin = 10;
+        for (let i = 0; i < this.building.height; i++) {
+            const people = this.building.getPeople(i);
+            const py = this.canvas.height - base + this.y - i * heightPerFloor - personHeight;
+            for (let j = 0; j < people.length; j++) {
+                const person = people[j];
+
+                const px = margin + 140 + j * (personWidth + personMargin);
+                ctx.drawImage(STICK_FIGURE, px, py, personWidth, personHeight);
+                ctx.fillStyle = '#ddd';
+                ctx.strokeStyle = '#111';
+                ctx.fillText(`${person.targetLevel + 1}`, px + personWidth / 2, py - 2);
+                ctx.strokeText(`${person.targetLevel + 1}`, px + personWidth / 2, py - 2);
+
+                if (person.currentLevel < person.targetLevel) {
+                    ctx.fillStyle = 'green';
+                    ctx.fillEquilateralTriangle(px + personWidth / 2 + 15, py - 2 - 20, 20);
+                }
+                else {
+                    ctx.fillStyle = 'red';
+                    ctx.fillEquilateralTriangle(px + personWidth / 2 + 15, py - 2 - 20, 20, true);
+                }
+            }
+        }
+    }
+
+    private renderBuildingZoomedOut(ctx: CustomContext) {
+
+    }
+
     private timeLastFrame: number | null = null;
-    private renderLoop() {
+    private loop() {
         if (!this.canvas || !this.ctx) {
             throw Error("Attempting to render with error in initialization.");
         }
@@ -118,56 +252,9 @@ class Engine {
         this.ctx.fillStyle = 'rgb(230, 230, 230)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw level markers
-        const heightPerFloor = 140;
-        const base = 50;
-        const margin = 100;
-        
-        this.ctx.shadowColor = 'rgba(0, 0, 0, 0)';
-        this.ctx.shadowBlur = 0;
-        this.ctx.fillStyle = '#666';
-        this.ctx.fillRect(0, this.canvas.height - base + this.y - 1, this.canvas.width, 2);
-        
-        this.ctx.font = "bold 55px sans-serif"
-        for (let i = 1; i <= this.building.height; i++) {
-            // draw floor marker
-            this.ctx.fillStyle = "#777";
-            this.ctx.fillRect(margin, this.canvas.height - base + this.y - i * heightPerFloor, this.canvas.width - margin * 2, 1);
-            // draw text background
-            const str = i.toString();
-            this.ctx.fillStyle = "rgb(225, 225, 225)";
-            const backgroundWidth = this.ctx.measureText(str).width + 20;
-            this.ctx.fillRect(margin + 20, this.canvas.height - base + this.y - i * heightPerFloor + 1, backgroundWidth, heightPerFloor - 2);
-            // draw floor number
-            this.ctx.fillStyle = "#ccc";
-            this.ctx.strokeStyle = "#bbb";
-            this.ctx.lineWidth = 2;
-            const ty = this.canvas.height - base + this.y - i * heightPerFloor + heightPerFloor / 2 + 20;
-            this.ctx.fillText(`${i}`, margin + 30, ty);
-            this.ctx.strokeText(`${i}`, margin + 30, ty);
-        }
+        this.renderBuildingRegular(this.ctx);
 
-        // this.ctx.fillStyle = '#111';
-        // const height = (Math.sin(Date.now() / 1000) * 0.5 + 0.5) * 100;
-        // this.ctx.shadowBlur = height;
-        // this.ctx.shadowOffsetY = height;
-        // this.ctx.shadowColor = 'gray';
-        // // this.ctx.fillRect(this.canvas.width / 2 - 200, this.canvas.height - height - 50, 400, 20);
-        // this.ctx.fillRoundedRect(this.canvas.width / 2 - 200, this.canvas.height - height - base + this.y, 400, 20, 8);
-        
-        const elevatorWidth = 80; // width of elevator
-        const elevatorHeight = heightPerFloor * 0.8;
-        const elevatorMargin = 10; // space around an elevator, i.e. total width = ewidth + 2 * emargin
-        const totWidth = elevatorWidth + elevatorMargin * 2;
-        let ex = this.canvas.width / 2 - (this.building.elevators.length * totWidth) / 2
-        for (const elevator of this.building.elevators) {
-            this.ctx.fillStyle = '#444';
-            const ey = this.canvas.height - base + this.y - elevator.currentHeight * heightPerFloor - elevatorHeight;
-            this.ctx.fillRoundedRect(ex + elevatorMargin, ey, elevatorWidth, elevatorHeight, 5);
-            ex += totWidth;
-        }
-
-        window.requestAnimationFrame(this.renderLoop);
+        window.requestAnimationFrame(this.loop);
     }
 }
 
