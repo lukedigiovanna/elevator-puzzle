@@ -5,13 +5,12 @@ import renderer from "../core";
 const Canvas = () => {
     const canvasRef = React.createRef<HTMLCanvasElement>();
 
-    // const resizeCanvas = () => {
-    //     if (canvasRef.current) {
-    //         const size = window.innerHeight;
-    //         canvasRef.current.width = size * 2;
-    //         canvasRef.current.height = size * 2;
-    //     }
-    // }
+    const resizeCanvas = () => {
+        if (canvasRef.current) {
+            const size = window.innerHeight;
+            canvasRef.current.style.width = `${size}px`;
+        }
+    }
 
     React.useEffect(() => {
         if (canvasRef.current) {

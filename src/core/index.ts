@@ -69,10 +69,15 @@ class Engine {
         this.loop = this.loop.bind(this);
         this.building = new Building(7);
         for (let i = 0; i < 5; i++) {
-            this.building.addElevator({
+            const elevator = this.building.addElevator({
                 startingLevel: i,
-                speed: 2
-            })
+                speed: 2,
+                maxOccupancy: 8
+            });
+            elevator.onLand = () => {
+                elevator.dropoff();
+                elevator.pickup();
+            }
         }
         for (let i = 0; i < this.building.height - 1; i++) {
             this.building.addPerson(0, i + 1);
@@ -190,6 +195,36 @@ class Engine {
             ctx.lineWidth = 8;
             ctx.strokeRoundedRect(ex + elevatorMargin, ey, elevatorWidth, elevatorHeight, 15);
 
+            // Draw elevator info: Level, Direction, Occupancy
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#f7b928';
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            const levelStr = `${Math.floor(elevator.currentHeight + 1.5)}`;
+            const strWidth = ctx.measureText(levelStr).width; 
+            ctx.fillText(levelStr, ex + 24, ey - 10);
+            ctx.strokeText(levelStr, ex + 24, ey - 10);
+
+            // Direction arrow
+            if (elevator.direction === 'up') {
+                ctx.fillStyle = 'green';
+                ctx.fillEquilateralTriangle(ex + 24 + strWidth + 15, ey - 28, 20);
+            }
+            else {
+                ctx.fillStyle = 'red';
+                ctx.fillEquilateralTriangle(ex + 24 + strWidth + 15, ey - 28, 20, true);
+            }
+
+            // Occupancy
+            const figureHeight = 24;
+            const figureWidth = STICK_FIGURE.width / STICK_FIGURE.height * figureHeight + 2;
+            ctx.drawImage(STICK_FIGURE, ex + 24 + strWidth + 15 + 20, ey - 31, figureWidth, figureHeight);
+
+            ctx.fillStyle = '#555';
+            ctx.fillText(`${elevator.occupancy.length}/${elevator.maxOccupancy}`, ex + 24 + strWidth + 15 + 20 + figureWidth + 7, ey - 10);
+            ctx.strokeText(`${elevator.occupancy.length}/${elevator.maxOccupancy}`, ex + 24 + strWidth + 15 + 20 + figureWidth + 7, ey - 10);
+
             ex += totWidth;
         }
 
@@ -199,7 +234,7 @@ class Engine {
         ctx.lineWidth = 1;
         // Stick figure's dimension is 308x811
         const personHeight = 120;
-        const personWidth = 308 / 811 * personHeight;
+        const personWidth = STICK_FIGURE.width / STICK_FIGURE.height * personHeight;
         const personMargin = 10;
         for (let i = 0; i < this.building.height; i++) {
             const people = this.building.getPeople(i);

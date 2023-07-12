@@ -1,9 +1,11 @@
 interface ElevatorParams {
     startingLevel: number;
+    maxOccupancy: number;
     speed: number;
 }
 
 type ElevatorState = 'door-opening' | 'door-closing' | 'stationary' | 'moving';
+type ElevatorDirection = 'up' | 'down';
 
 class Elevator {
     currentLevel: number; // the level of the elevator 
@@ -13,22 +15,36 @@ class Elevator {
     speed: number; // levels per second
     doorSpeed: number;
     doorStatus: number; // 0 is open, 1 is closed  
+    maxOccupancy: number;
+    occupancy: Person[];
+    direction: ElevatorDirection;
+
+    building: Building;
+
     state: ElevatorState;
 
-    constructor(buildingHeight: number, params: ElevatorParams) {
-        this.currentLevel = params.startingLevel;
-        this.currentHeight = params.startingLevel;
-        this.targetLevel = params.startingLevel;
-        this.speed = params.speed;
+    // Callback function for when the elevator lands on a floor.
+    onLand: (() => void) | undefined;
+
+    constructor(building: Building, {startingLevel, speed, maxOccupancy }: ElevatorParams) {
+        this.currentLevel = startingLevel;
+        this.currentHeight = startingLevel;
+        this.targetLevel = startingLevel;
+        this.speed = speed;
         this.doorSpeed = 0.8;
-        
+        this.building = building;
+
         this.doorStatus = 0;
         this.state = 'stationary';
+        this.direction = 'up';
 
         this.reachableLevels = [];
-        for (let i = 0; i < buildingHeight; i++) {
+        for (let i = 0; i < building.height; i++) {
             this.reachableLevels.push(i);
         }
+
+        this.maxOccupancy = maxOccupancy;
+        this.occupancy = [];
     }
 
     private static ACCEL_DIST = 0.5;
@@ -39,9 +55,16 @@ class Elevator {
      * @param dt 
      */
     update(dt: number) {
-        // determine our state.
         // Door is open and we are on the right level.
         if (this.doorStatus === 0 && this.currentHeight === this.targetLevel) {
+            // If changing from the door-opening to stationary state, then that means we landed on a floor.
+            if (this.state === 'door-opening') {
+                this.state = 'stationary';
+
+                if (this.onLand) {
+                    this.onLand(); // So call that callback function if it exists.
+                }
+            }
             this.state = 'stationary';
         }
         // Door is closed and we are on the wrong level: start/continue moving
@@ -67,6 +90,13 @@ class Elevator {
                 const distanceFrom = Math.abs(this.currentLevel - this.currentHeight);
                 const distance = Math.min(distanceTo, distanceFrom);
                 const direction = Math.sign(this.targetLevel - this.currentHeight);
+                if (direction < 0) {
+                    this.direction = 'down';
+                }
+                else {
+                    this.direction = 'up';
+                }
+
                 let speed = this.speed;
                 if (distance < Elevator.ACCEL_DIST) {
                     speed = distance / Elevator.ACCEL_DIST * this.speed + 0.1;
@@ -82,6 +112,43 @@ class Elevator {
             this.doorStatus = Math.max(this.doorStatus - this.doorSpeed * dt, 0.0);
         }
         // if stationary we don't need to do anything!
+    }
+
+
+    pickup() {
+        if (this.state !== 'stationary') {
+            throw new Error("Elevator cannot pickup passengers when not stationary");
+        }
+
+        // pick up as many people from the level we are on as we can
+        const people = this.building.getPeople(this.currentLevel);
+        // Only take people who want to leave this level.
+        for (let i = 0; i < people.length; i++) {
+            if (people[i].targetLevel !== people[i].currentLevel) {
+                this.occupancy.push(people[i]);
+                people.splice(i, 1);
+                i--;
+            }
+            if (this.occupancy.length >= this.maxOccupancy) {
+                break;
+            }
+        }
+    }
+
+    dropoff() {
+        if (this.state !== 'stationary') {
+            throw new Error("Elevator cannot drop off passengers when not stationary");
+        }
+
+        // Drop off any passengers who are supposed to get off at this floor
+        for (let i = 0; i < this.occupancy.length; i++) {
+            if (this.occupancy[i].targetLevel === this.currentLevel) {
+                this.building.getPeople(this.currentLevel).push(this.occupancy[i]);
+                this.occupancy[i].currentLevel = this.currentLevel;
+                this.occupancy.splice(i, 1);
+                i--;
+            }
+        }
     }
 }
 
@@ -106,8 +173,15 @@ class Building {
         this.elevators = [];
     }
 
-    addElevator(params: ElevatorParams) {
-        this.elevators.push(new Elevator(this.height, params));
+    /**
+     * 
+     * @param params The parameters object that defines the elevator.
+     * @returns 
+     */
+    addElevator(params: ElevatorParams): Elevator {
+        const elevator = new Elevator(this, params);
+        this.elevators.push(elevator);
+        return elevator;
     }
 
     update(dt: number) {
