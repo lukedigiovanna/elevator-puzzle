@@ -156,6 +156,7 @@ interface Person {
     currentLevel: number;
     targetLevel: number;
     elevator: Elevator | null; // gives the elevator the person is in, or null if not in an elevator
+    walkingOffset: number;
 }
 
 class Building {
@@ -188,6 +189,20 @@ class Building {
         for (const elevator of this.elevators) {
             elevator.update(dt);
         }
+        const walkingSpeed = 200;
+        for (let i = 0; i < this.height; i++) {
+            const people = this.getPeople(i);
+            for (let j = 0; j < people.length; j++) {
+                const person = people[j];
+                if (person.currentLevel === person.targetLevel) {
+                    person.walkingOffset += walkingSpeed * dt;
+                    if (person.walkingOffset > 1500) {
+                        people.splice(j, 1);
+                        j--;
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -207,10 +222,25 @@ class Building {
         const person: Person = {
             currentLevel,
             targetLevel,
-            elevator: null
+            elevator: null,
+            walkingOffset: 0
         };
 
         this.getPeople(currentLevel).push(person);
+    }
+
+    /**
+     * Returns true if there is anyone waiting in this building.
+     */
+    hasPeople() {
+        for (let level = 0; level < this.height; level++) {
+            for (const person of this.getPeople(level)) {
+                if (person.currentLevel !== person.targetLevel) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
 

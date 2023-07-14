@@ -1,0 +1,15 @@
+.control-area {
+    height: 50vh;
+    width: 100%;
+    border-top: 3px solid black;
+
+    .console {
+        background-color: #eee;
+        padding: 5px;
+        font-family: 'Monaco'
+
+        p {
+            margin: 0;
+        }
+    }
+}

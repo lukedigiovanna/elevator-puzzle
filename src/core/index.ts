@@ -1,4 +1,5 @@
 import { Building } from "./elevators";
+import { BuildingCodeWrapper, ElevatorCodeWrapper } from "./codeWrapper";
 import stickFigureSrc from "../assets/stickman.png";
 
 const STICK_FIGURE = new Image();
@@ -67,22 +68,35 @@ class Engine {
 
     constructor() {
         this.loop = this.loop.bind(this);
-        this.building = new Building(7);
-        for (let i = 0; i < 5; i++) {
+        this.building = new Building(6);
+        for (let i = 0; i < 1; i++) {
             const elevator = this.building.addElevator({
                 startingLevel: i,
                 speed: 2,
                 maxOccupancy: 8
             });
-            elevator.onLand = () => {
-                elevator.dropoff();
-                elevator.pickup();
-            }
+            // elevator.onLand = () => {
+            //     elevator.dropoff();
+            //     setTimeout(() => {
+            //         elevator.pickup();
+            //         elevator.targetLevel = (elevator.targetLevel + 1) % elevator.building.height;
+            //     }, 500);
+            // }
         }
-        for (let i = 0; i < this.building.height - 1; i++) {
-            this.building.addPerson(0, i + 1);
-            this.building.addPerson(4, i + 1);
+        for (let i = 0; i < 20; i++) {
+            this.building.addPerson(
+                Math.floor(Math.random() * this.building.height),
+                Math.floor(Math.random() * this.building.height)
+            );
         }
+    }
+
+    async executeUserCode(code: string, logCallback: (msg: any) => void) {
+        const addAwaits = code.replaceAll('elevator.goto(', 'await elevator.goto(');
+        const func = new Function('elevator', 'building', 'log', `(async () => {${addAwaits}})();`);
+        const elevatorCW = new ElevatorCodeWrapper(this.building.elevators[0]);
+        const buildingCW = new BuildingCodeWrapper(this.building);
+        func(elevatorCW, buildingCW, logCallback);
     }
 
     /**
@@ -96,12 +110,6 @@ class Engine {
 
         this.canvas.addEventListener("wheel", (ev) => {
             this.y = Math.max(this.y - ev.deltaY, 0);
-        });
-
-        this.canvas.addEventListener('mousedown', (ev) => {
-            for (const elevator of this.building.elevators) {
-                elevator.targetLevel = (elevator.targetLevel + 1) % this.building.height;
-            }
         });
 
         this.initialized = true;
@@ -239,23 +247,32 @@ class Engine {
         for (let i = 0; i < this.building.height; i++) {
             const people = this.building.getPeople(i);
             const py = this.canvas.height - base + this.y - i * heightPerFloor - personHeight;
+            const sx = margin + 140;
+            let px = sx;
+            let wpx = sx;
             for (let j = 0; j < people.length; j++) {
                 const person = people[j];
 
-                const px = margin + 140 + j * (personWidth + personMargin);
-                ctx.drawImage(STICK_FIGURE, px, py, personWidth, personHeight);
-                ctx.fillStyle = '#ddd';
-                ctx.strokeStyle = '#111';
-                ctx.fillText(`${person.targetLevel + 1}`, px + personWidth / 2, py - 2);
-                ctx.strokeText(`${person.targetLevel + 1}`, px + personWidth / 2, py - 2);
+                if (person.currentLevel !== person.targetLevel) {
+                    ctx.drawImage(STICK_FIGURE, px, py, personWidth, personHeight);
+                    ctx.fillStyle = '#ddd';
+                    ctx.strokeStyle = '#111';
+                    ctx.fillText(`${person.targetLevel + 1}`, px + personWidth / 2, py - 2);
+                    ctx.strokeText(`${person.targetLevel + 1}`, px + personWidth / 2, py - 2);
 
-                if (person.currentLevel < person.targetLevel) {
-                    ctx.fillStyle = 'green';
-                    ctx.fillEquilateralTriangle(px + personWidth / 2 + 15, py - 2 - 20, 20);
+                    if (person.currentLevel < person.targetLevel) {
+                        ctx.fillStyle = 'green';
+                        ctx.fillEquilateralTriangle(px + personWidth / 2 + 15, py - 2 - 20, 20);
+                    }
+                    else {
+                        ctx.fillStyle = 'red';
+                        ctx.fillEquilateralTriangle(px + personWidth / 2 + 15, py - 2 - 20, 20, true);
+                    }
+                    px += personWidth + personMargin;
                 }
                 else {
-                    ctx.fillStyle = 'red';
-                    ctx.fillEquilateralTriangle(px + personWidth / 2 + 15, py - 2 - 20, 20, true);
+                    ctx.drawImage(STICK_FIGURE, wpx + person.walkingOffset, py, personWidth, personHeight);
+                    wpx += personWidth + personMargin;
                 }
             }
         }
