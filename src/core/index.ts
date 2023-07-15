@@ -1,60 +1,11 @@
 import { Building } from "./elevators";
 import { BuildingCodeWrapper, ElevatorCodeWrapper } from "./codeWrapper";
 import stickFigureSrc from "../assets/stickman.png";
+import { Level, level1, level2 } from "./levels";
+import { CustomContext, makeCustomContext } from "./customContext";
 
 const STICK_FIGURE = new Image();
 STICK_FIGURE.src = stickFigureSrc;
-
-interface CustomContext extends CanvasRenderingContext2D {
-    fillRoundedRect(x: number, y: number, width: number, height: number, radius: number): void;
-    strokeRoundedRect(x: number, y: number, width: number, height: number, radius: number): void;
-    fillEquilateralTriangle(x: number, y: number, size: number, flipVertically?: boolean): void;
-}
-
-function makeCustomContext(ctx: CanvasRenderingContext2D): CustomContext {
-    const _this = ctx as CustomContext;
-
-    const drawRoundedRect = (x: number, y: number, width: number, height: number, radius: number) => {
-        _this.beginPath();
-        _this.moveTo(x + radius, y);
-        _this.lineTo(x + width - radius, y);
-        _this.arcTo(x + width, y, x + width, y + radius, radius);
-        _this.lineTo(x + width, y + height - radius);
-        _this.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-        _this.lineTo(x + radius, y + height);
-        _this.arcTo(x, y + height, x, y + height - radius, radius);
-        _this.lineTo(x, y + radius);
-        _this.arcTo(x, y, x + radius, y, radius);
-        _this.closePath();
-    }
-
-    _this.fillRoundedRect = (x: number, y: number, width: number, height: number, radius: number) => {
-        drawRoundedRect(x, y, width, height, radius);
-        _this.fill();
-    }
-
-    _this.strokeRoundedRect = (x: number, y: number, width: number, height: number, radius: number) => {
-        drawRoundedRect(x, y, width, height, radius);
-        _this.stroke();
-    }
-
-    _this.fillEquilateralTriangle = (x: number, y: number, size: number, flipVertically: boolean=false) => {
-        const height = (Math.sqrt(3) / 2) * size;
-  
-        const sign = flipVertically ? -1 : 1;
-        const offset = flipVertically ? height : 0;
-
-        _this.beginPath();
-        _this.moveTo(x, y + offset);
-        _this.lineTo(x + size / 2, y + sign * height + offset);
-        _this.lineTo(x - size / 2, y + sign * height + offset);
-        _this.closePath();
-  
-        _this.fill();
-    }
-
-    return _this;
-}
 
 class Engine {
     private canvas: HTMLCanvasElement | null = null;
@@ -64,36 +15,43 @@ class Engine {
 
     private y: number = 0;
 
-    private building: Building;
+    private building: Building | null;
 
     constructor() {
         this.loop = this.loop.bind(this);
-        this.building = new Building(6);
-        for (let i = 0; i < 1; i++) {
-            const elevator = this.building.addElevator({
-                startingLevel: i,
-                speed: 2,
-                maxOccupancy: 8
+        this.building = null;
+        this.loadLevel(level2);
+    }
+
+    loadLevel(level: Level) {
+        this.building = new Building(level.buildingHeight);
+        for (const elevator of level.elevators) {
+            this.building.addElevator({
+                speed: elevator.speed,
+                maxOccupancy: elevator.capacity,
+                startingLevel: elevator.startingLevel ? elevator.startingLevel : 0
             });
-            // elevator.onLand = () => {
-            //     elevator.dropoff();
-            //     setTimeout(() => {
-            //         elevator.pickup();
-            //         elevator.targetLevel = (elevator.targetLevel + 1) % elevator.building.height;
-            //     }, 500);
-            // }
         }
-        for (let i = 0; i < 20; i++) {
-            this.building.addPerson(
-                Math.floor(Math.random() * this.building.height),
-                Math.floor(Math.random() * this.building.height)
-            );
+        for (const person of level.people) {
+            this.building.addPerson(person.start, person.end);
         }
     }
 
     async executeUserCode(code: string, logCallback: (msg: any) => void) {
+        if (!this.building) {
+            throw new Error("Cannot exceute user code when no building is loaded in");
+        }
+
         const addAwaits = code.replaceAll('elevator.goto(', 'await elevator.goto(');
-        const func = new Function('elevator', 'building', 'log', `(async () => {${addAwaits}})();`);
+        const func = new Function('elevator', 'building', 'log', 
+            `(async () => {
+                try {
+                    ${addAwaits}
+                }
+                catch (err) {
+                    log(err);
+                }
+            })();`);
         const elevatorCW = new ElevatorCodeWrapper(this.building.elevators[0]);
         const buildingCW = new BuildingCodeWrapper(this.building);
         func(elevatorCW, buildingCW, logCallback);
@@ -148,10 +106,12 @@ class Engine {
     private renderBuildingRegular(ctx: CustomContext) {
         if (!this.canvas) return;
 
+        if (!this.building) return;
+
         // Draw level markers
         const heightPerFloor = 240;
         const base = 100;
-        const margin = 200;
+        const margin = 100;
         
         ctx.shadowColor = 'rgba(0, 0, 0, 0)';
         ctx.shadowBlur = 0;
@@ -298,7 +258,9 @@ class Engine {
             dt = (timeNow - this.timeLastFrame) / 1000.0;
         }
         this.timeLastFrame = timeNow;
-        this.building.update(dt);
+
+        if (this.building)
+            this.building.update(dt);
 
         // Draw the background
         this.ctx.fillStyle = 'rgb(230, 230, 230)';

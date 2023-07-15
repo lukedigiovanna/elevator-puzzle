@@ -14,10 +14,6 @@ function pauseUntil(condition: () => boolean) {
     });
 }
 
-function delay(milliseconds: number) {
-    return new Promise(resolve => setTimeout(resolve, milliseconds));
-}
-
 /**
  * Wraps an elevator to control it from the code editor.
  * 
@@ -42,6 +38,10 @@ class ElevatorCodeWrapper {
         this.elevator.targetLevel = level - 1;
         // Need to now synchronously wait until this elevator arrives
         await pauseUntil(() => this.elevator.state === 'stationary' && this.elevator.currentLevel === this.elevator.targetLevel);
+    }
+
+    get level() {
+        return this.elevator.currentLevel;
     }
 
     get destinations() {

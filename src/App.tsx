@@ -10,9 +10,11 @@ function App() {
     <div className='app-row'>
       <Canvas />
       <div className='app-col'>
-        <Editor height='50vh' defaultLanguage='javascript'  onChange={(value: string | undefined) => {
-          setCode(value ? value : "");
-        }}/>
+        <div className='editor'>
+          <Editor height="100%" defaultLanguage='javascript' onChange={(value: string | undefined) => {
+            setCode(value ? value : "");
+          }}/>
+        </div>
         <ControlArea code={code} />
       </div>
     </div>

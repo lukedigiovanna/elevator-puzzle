@@ -1,6 +1,13 @@
 @import './App.scss';
 @import './components/index.scss';
 
+@font-face {
+  font-family: 'Monaco';
+  src: url('../assets/Monaco.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

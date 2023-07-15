@@ -14,7 +14,7 @@ const Canvas = () => {
     }, [canvasRef])
 
     return  (
-        <canvas ref={canvasRef} className='main-canvas' width={1500} height={1500} />
+        <canvas ref={canvasRef} className='main-canvas' width={1300} height={1500} />
     )
 }
 
