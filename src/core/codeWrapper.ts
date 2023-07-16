@@ -21,9 +21,11 @@ function pauseUntil(condition: () => boolean) {
  */
 class ElevatorCodeWrapper {
     private elevator: Elevator;
+    private shouldTerminateObject: any;
 
-    constructor(elevator: Elevator) {
+    constructor(elevator: Elevator, shouldTerminateObject: any) {
         this.elevator = elevator;
+        this.shouldTerminateObject = shouldTerminateObject;
     }
 
     pickup() {
@@ -35,9 +37,11 @@ class ElevatorCodeWrapper {
     }
 
     async goto(level: number) {
-        this.elevator.targetLevel = level - 1;
+        this.elevator.targetLevel = level;
         // Need to now synchronously wait until this elevator arrives
-        await pauseUntil(() => this.elevator.state === 'stationary' && this.elevator.currentLevel === this.elevator.targetLevel);
+        await pauseUntil(() => {
+            return (this.elevator.state === 'stationary' && this.elevator.currentLevel === this.elevator.targetLevel) || this.shouldTerminateObject.val;
+        });
     }
 
     get level() {
@@ -51,9 +55,11 @@ class ElevatorCodeWrapper {
 
 class BuildingCodeWrapper {
     private building: Building;
+    private shouldTerminateObject: any;
 
-    constructor(building: Building) {
+    constructor(building: Building, shouldTerminateObject: any) {
         this.building = building;
+        this.shouldTerminateObject = shouldTerminateObject;
     }
 
     get height() {

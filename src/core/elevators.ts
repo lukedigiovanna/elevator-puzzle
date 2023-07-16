@@ -124,13 +124,13 @@ class Elevator {
         const people = this.building.getPeople(this.currentLevel);
         // Only take people who want to leave this level.
         for (let i = 0; i < people.length; i++) {
+            if (this.occupancy.length >= this.maxOccupancy) {
+                break;
+            }
             if (people[i].targetLevel !== people[i].currentLevel) {
                 this.occupancy.push(people[i]);
                 people.splice(i, 1);
                 i--;
-            }
-            if (this.occupancy.length >= this.maxOccupancy) {
-                break;
             }
         }
     }

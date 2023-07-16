@@ -1,12 +1,12 @@
 .control-area {
     flex: 6;
     width: 100%;
-    border-top: 3px solid black;
+    border-top: 5px solid black;
     display: flex;
     flex-direction: column;
 
     .info-region {
-        flex: 5;
+        flex: 7;
 
         .tabs {
             padding: 6px;
@@ -37,24 +37,31 @@
 
         .tab {
             overflow-y: scroll;
-            max-height: 300px;
+            background-color:rgb(49, 49, 53);
+            color: #eee;
+            height: 300px;
+            padding: 5px;
             
-            // .console {
-            //     background-color: #eee;
-            //     padding: 5px;
-            //     max-height: inherit;
-            //     overflow-y: scroll;
-                
-            // }
-            p {
+            .console-line {
                 font-family: 'Monaco';
                 margin: 0;
                 font-size: 15px;
-                color: #111;
+                color: #ddd;
+            }
+
+            .results {
+                #title {
+                    font-weight: bold;
+                    margin: 0;
+                }
+
+                #nickname {
+                    font-style: italic;
+                    font-weight: normal;
+                    font-size: 0.8rem;
+                }
             }
         }
-
-        overflow-y: scroll;
     }
 
 
@@ -74,6 +81,53 @@
             display: flex;
             flex-direction: row;
             align-items: center;
+
+            padding: 0px 10px;
+
+            button {
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                font-weight: bold;
+                padding: 4px 10px;
+                border-radius: 8px;
+                margin: 0px 10px;
+                border: 2px solid #444;
+
+                transition: background-color 0.4s ease-in-out;
+            }
+
+            #run-button {
+                color: rgb(0, 197, 0);
+                background-color: rgb(183, 255, 183);
+                
+                &:hover {
+                    background-color: rgb(123, 255, 123);
+                }
+            }
+
+            #reset-button {
+                color: rgb(197, 0, 0);
+                background-color: rgb(255, 183, 183);
+                
+                &:hover {
+                    background-color: rgb(255, 123, 123);
+                }
+            }
+
+            #speed-button {
+                &:hover {
+                    background-color: #333;
+                }
+
+                .on {
+                    color: #eee;
+                }
+
+                .off {
+                    color: #999;
+                }
+            }
         }
     }
 }

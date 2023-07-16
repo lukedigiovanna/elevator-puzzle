@@ -11,9 +11,22 @@ function App() {
       <Canvas />
       <div className='app-col'>
         <div className='editor'>
-          <Editor height="100%" defaultLanguage='javascript' onChange={(value: string | undefined) => {
-            setCode(value ? value : "");
-          }}/>
+          <Editor 
+            height="100%" 
+            defaultLanguage='javascript' 
+            value={"// write your code here"} 
+            onChange={(value: string | undefined) => {
+              setCode(value ? value : "");
+            }}
+            options={{
+              minimap: {
+                enabled: false,
+              },
+              fontSize: 14,
+              wordWrap: "on",
+            }}
+            theme="vs-dark"
+          />
         </div>
         <ControlArea code={code} />
       </div>

@@ -16,10 +16,12 @@ interface Level {
     buildingHeight: number;
     elevators: IElevator[];
     people: IPerson[];
+    passTime: number;
 }
 
 const level1: Level = {
     buildingHeight: 2,
+    nickname: "Tutorial",
     elevators: [
         {
             speed: 0.5,
@@ -32,6 +34,7 @@ const level1: Level = {
             end: 1
         }
     ],
+    passTime: 30
 }
 
 const level2: Level = {
@@ -51,12 +54,39 @@ const level2: Level = {
             start: 0,
             end: 2
         }
-    ]
+    ],
+    passTime: 60
+}
+
+const level3: Level = {
+    buildingHeight: 3,
+    elevators: [
+        {
+            speed: 0.5,
+            capacity: 1
+        }
+    ],
+    people: [
+        {
+            start: 0,
+            end: 1
+        },
+        {
+            start: 1,
+            end: 0
+        },
+        {
+            start: 2,
+            end: 0
+        }
+    ],
+    passTime: 60
 }
 
 const levels = [
     level1,
-    level2
+    level2,
+    level3
 ];
 
 export type { Level };

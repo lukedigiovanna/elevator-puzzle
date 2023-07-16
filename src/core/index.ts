@@ -7,15 +7,30 @@ import { CustomContext, makeCustomContext } from "./customContext";
 const STICK_FIGURE = new Image();
 STICK_FIGURE.src = stickFigureSrc;
 
+interface EngineObserver {
+    setTime: React.Dispatch<React.SetStateAction<number | undefined>>;
+};
+
 class Engine {
     private canvas: HTMLCanvasElement | null = null;
     private ctx: CustomContext | null = null;
     private initialized: boolean = false;
     private running: boolean = false;
+    public speed: number = 1.0;
 
     private y: number = 0;
 
     private building: Building | null;
+
+    private level: Level | null = null;
+
+    private statusObject = {
+        shouldTerminate: false,
+        runningCode: false
+    };
+    private elapsedTime: number = 0.0;
+
+    private observer: EngineObserver | null = null;
 
     constructor() {
         this.loop = this.loop.bind(this);
@@ -24,6 +39,8 @@ class Engine {
     }
 
     loadLevel(level: Level) {
+        this.level = level;
+
         this.building = new Building(level.buildingHeight);
         for (const elevator of level.elevators) {
             this.building.addElevator({
@@ -37,24 +54,51 @@ class Engine {
         }
     }
 
+    resetLevel() {
+        if (!this.level) {
+            throw new Error("Cannot reset level when no level is set.");
+        }
+
+        this.elapsedTime = 0.0;
+        this.observer?.setTime(this.elapsedTime);
+        this.loadLevel(this.level);
+    }
+
+    stopCode() {
+        this.statusObject.shouldTerminate = true;
+        this.statusObject.runningCode = false;
+    }
+
     async executeUserCode(code: string, logCallback: (msg: any) => void) {
         if (!this.building) {
             throw new Error("Cannot exceute user code when no building is loaded in");
         }
 
+        this.statusObject.shouldTerminate = false;
+        this.statusObject.runningCode = true;
+        this.elapsedTime = 0.0;
+        this.observer?.setTime(this.elapsedTime);
+
         const addAwaits = code.replaceAll('elevator.goto(', 'await elevator.goto(');
-        const func = new Function('elevator', 'building', 'log', 
-            `(async () => {
-                try {
-                    ${addAwaits}
-                }
-                catch (err) {
-                    log(err);
-                }
-            })();`);
-        const elevatorCW = new ElevatorCodeWrapper(this.building.elevators[0]);
-        const buildingCW = new BuildingCodeWrapper(this.building);
-        func(elevatorCW, buildingCW, logCallback);
+        
+        // Then between each line we can add a check for if we should terminate
+        const addTerminationChecks = addAwaits.replaceAll('\n', "\nif (__status.shouldTerminate) { __status.runningCode = false; return; }\n");
+
+        const surroundAsync = `(async () => {
+            try {
+                ${addTerminationChecks}
+            }
+            catch (err) {
+                log(err);
+                console.log(err);
+            }
+            __status.runningCode = false;
+        })();`;
+
+        const func = new Function('elevator', 'building', 'log', '__status', surroundAsync);
+        const elevatorCW = new ElevatorCodeWrapper(this.building.elevators[0], this.statusObject);
+        const buildingCW = new BuildingCodeWrapper(this.building, this.statusObject);
+        func(elevatorCW, buildingCW, logCallback, this.statusObject);
     }
 
     /**
@@ -121,21 +165,21 @@ class Engine {
         ctx.font = 'bold 85px sans-serif'
         ctx.lineWidth = 4;
         ctx.textAlign = 'center';
-        for (let i = 1; i <= this.building.height; i++) {
+        for (let i = 0; i < this.building.height; i++) {
             // draw floor marker
             ctx.fillStyle = "#777";
-            const fy = this.canvas.height - base + this.y - i * heightPerFloor;
+            const fy = this.canvas.height - base + this.y - (i + 1) * heightPerFloor;
             ctx.fillRect(margin, fy, this.canvas.width - margin * 2 - 1, 2);
             
             // draw text background
             const str = i.toString();
             ctx.fillStyle = 'rgb(225, 225, 225)';
             const backgroundWidth = ctx.measureText(str).width + 50;
-            ctx.fillRect(margin + 20, this.canvas.height - base + this.y - i * heightPerFloor + 2, backgroundWidth, heightPerFloor - 4);
+            ctx.fillRect(margin + 20, this.canvas.height - base + this.y - (i + 1) * heightPerFloor + 2, backgroundWidth, heightPerFloor - 4);
             // draw floor number
             ctx.fillStyle = '#ccc';
             ctx.strokeStyle = '#bbb';
-            const ty = this.canvas.height - base + this.y - i * heightPerFloor + heightPerFloor / 2 + 20;
+            const ty = this.canvas.height - base + this.y - (i + 1) * heightPerFloor + heightPerFloor / 2 + 20;
             ctx.fillText(`${i}`, margin + 20 + backgroundWidth / 2, ty);
             ctx.strokeText(`${i}`, margin + 20 + backgroundWidth / 2, ty);
         }
@@ -169,7 +213,7 @@ class Engine {
             ctx.fillStyle = '#f7b928';
             ctx.strokeStyle = '#222';
             ctx.lineWidth = 1;
-            const levelStr = `${Math.floor(elevator.currentHeight + 1.5)}`;
+            const levelStr = `${Math.floor(elevator.currentHeight + 0.5)}`;
             const strWidth = ctx.measureText(levelStr).width; 
             ctx.fillText(levelStr, ex + 24, ey - 10);
             ctx.strokeText(levelStr, ex + 24, ey - 10);
@@ -217,8 +261,8 @@ class Engine {
                     ctx.drawImage(STICK_FIGURE, px, py, personWidth, personHeight);
                     ctx.fillStyle = '#ddd';
                     ctx.strokeStyle = '#111';
-                    ctx.fillText(`${person.targetLevel + 1}`, px + personWidth / 2, py - 2);
-                    ctx.strokeText(`${person.targetLevel + 1}`, px + personWidth / 2, py - 2);
+                    ctx.fillText(`${person.targetLevel}`, px + personWidth / 2, py - 2);
+                    ctx.strokeText(`${person.targetLevel}`, px + personWidth / 2, py - 2);
 
                     if (person.currentLevel < person.targetLevel) {
                         ctx.fillStyle = 'green';
@@ -242,6 +286,10 @@ class Engine {
 
     }
 
+    setObserver(observer: EngineObserver) {
+        this.observer = observer;
+    }
+
     private timeLastFrame: number | null = null;
     private loop() {
         if (!this.canvas || !this.ctx) {
@@ -255,9 +303,17 @@ class Engine {
         const timeNow = Date.now();
         let dt = 0;
         if (this.timeLastFrame) {
-            dt = (timeNow - this.timeLastFrame) / 1000.0;
+            dt = (timeNow - this.timeLastFrame) / 1000.0 * Math.pow(2, this.speed - 1);
         }
         this.timeLastFrame = timeNow;
+
+        if (this.statusObject.runningCode) {
+            this.elapsedTime += dt;
+            this.observer?.setTime(this.elapsedTime);
+        }
+        else {
+            dt = 0;
+        }
 
         if (this.building)
             this.building.update(dt);
