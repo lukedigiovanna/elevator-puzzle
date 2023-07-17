@@ -30,11 +30,13 @@ export const ControlArea = (props: {code: string}) => {
 
     const [speed, setSpeed] = React.useState<number>(1);
 
-    const [time, setTime] = React.useState<number>()
+    const [time, setTime] = React.useState<number>(0)
+    const [running, setRunning] = React.useState<boolean>(false);
 
     React.useEffect(() => {
         engine.setObserver({
-            setTime
+            setTime,
+            setRunning
         })
     }, []);
 
@@ -95,6 +97,10 @@ export const ControlArea = (props: {code: string}) => {
                                 Level: {level + 1} <span id='nickname'>{levels[level].nickname ? `("${levels[level].nickname}")` : ''}</span>
                             </p>
 
+                            <p id='pass-time'>
+                                Pass Time: {levels[level].passTime}s
+                            </p>
+
                             <p>
                                 Time: {time?.toFixed(2) || "0.00"}
                             </p>
@@ -113,11 +119,6 @@ export const ControlArea = (props: {code: string}) => {
                             }} disabled={level >= levels.length - 1}>
                                 Next level
                             </button>
-                            <button onClick={() => {
-                                engine.resetLevel();
-                            }}>
-                                Reset
-                            </button>
                         </div>
                     }
                 </div>
@@ -125,7 +126,7 @@ export const ControlArea = (props: {code: string}) => {
 
             <div className='run-bar'>
                 <div className='container'>
-                    <button id='run-button' onClick={async () => {
+                    <button id='run-button' disabled={running} onClick={async () => {
                         engine.resetLevel();
                         await delay(500);
                         clearLogMessages();
@@ -135,12 +136,12 @@ export const ControlArea = (props: {code: string}) => {
                     }}>
                         Run Code
                     </button>
-                    <button id='reset-button' onClick={() => {
+                    <button id='reset-button' disabled={running} onClick={() => {
                         engine.resetLevel();
                     }}>
                         Reset
                     </button>
-                    <button id='stop-button' onClick={() => {
+                    <button id='stop-button' disabled={!running} onClick={() => {
                         engine.stopCode();
                     }}>
                         Stop

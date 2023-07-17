@@ -8,7 +8,8 @@ const STICK_FIGURE = new Image();
 STICK_FIGURE.src = stickFigureSrc;
 
 interface EngineObserver {
-    setTime: React.Dispatch<React.SetStateAction<number | undefined>>;
+    setTime: React.Dispatch<React.SetStateAction<number>>;
+    setRunning: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 class Engine {
@@ -26,7 +27,11 @@ class Engine {
 
     private statusObject = {
         shouldTerminate: false,
-        runningCode: false
+        runningCode: false,
+        setRunning: (val: boolean) => {
+            this.statusObject.runningCode = val;
+            this.observer?.setRunning(val);
+        }
     };
     private elapsedTime: number = 0.0;
 
@@ -66,7 +71,7 @@ class Engine {
 
     stopCode() {
         this.statusObject.shouldTerminate = true;
-        this.statusObject.runningCode = false;
+        this.statusObject.setRunning(false);
     }
 
     async executeUserCode(code: string, logCallback: (msg: any) => void) {
@@ -75,14 +80,15 @@ class Engine {
         }
 
         this.statusObject.shouldTerminate = false;
-        this.statusObject.runningCode = true;
+        this.statusObject.setRunning(true);
+        
         this.elapsedTime = 0.0;
         this.observer?.setTime(this.elapsedTime);
 
         const addAwaits = code.replaceAll('elevator.goto(', 'await elevator.goto(');
         
         // Then between each line we can add a check for if we should terminate
-        const addTerminationChecks = addAwaits.replaceAll('\n', "\nif (__status.shouldTerminate) { __status.runningCode = false; return; }\n");
+        const addTerminationChecks = addAwaits.replaceAll('\n', "\nif (__status.shouldTerminate) { __status.setRunning(false); return; }\n");
 
         const surroundAsync = `(async () => {
             try {
@@ -92,7 +98,7 @@ class Engine {
                 log(err);
                 console.log(err);
             }
-            __status.runningCode = false;
+            __status.setRunning(false);
         })();`;
 
         const func = new Function('elevator', 'building', 'log', '__status', surroundAsync);

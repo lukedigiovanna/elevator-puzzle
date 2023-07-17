@@ -22,7 +22,7 @@ function App() {
               minimap: {
                 enabled: false,
               },
-              fontSize: 14,
+              fontSize: 12,
               wordWrap: "on",
             }}
             theme="vs-dark"
