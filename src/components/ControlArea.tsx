@@ -1,17 +1,22 @@
 import engine from "../core";
 import React from "react";
 import levels from "../core/levels";
-import { delay } from "../utils/timeutils";
+import { sleep } from "../utils/timeutils";
 
 const tabs = ['Results', 'Console', 'Documentation'];
 
 const MAX_SPEED = 3;
+
+const MAX_LOG_MESSAGES = 250;
 
 export const ControlArea = (props: {code: string}) => {
     const [reactLogMessages, setReactLogMessages] = React.useState<any[]>([]);
     const logMessages: any[] = [];
     const addLogMessage = (msg: any) => {
         logMessages.push(msg);
+        if (logMessages.length > MAX_LOG_MESSAGES) {
+            logMessages.shift();
+        }
         setReactLogMessages([...logMessages]);
     }
 
@@ -23,7 +28,6 @@ export const ControlArea = (props: {code: string}) => {
     const [tab, setTab] = React.useState<string>(tabs[0]);
 
     const [level, setLevel] = React.useState<number>(0);
-
     React.useEffect(() => {
         engine.loadLevel(levels[level]);
     }, [level]);
@@ -43,7 +47,7 @@ export const ControlArea = (props: {code: string}) => {
     return (
         <div className='control-area'>
             <div className='info-region'>
-                <div className='tabs'>
+                <div className='navbar'>
                     {
                         tabs.map((tabName: string, index: number) => {
                             return (
@@ -59,7 +63,9 @@ export const ControlArea = (props: {code: string}) => {
                 <div className='tab'>
                     { 
                         tab === 'Console' &&
-                        <>
+                        <div id='console' onWheel={() => { 
+                            console.log('scrolling');
+                        }}>
                             {
                                 reactLogMessages.map((msg: any, index: number) => {
                                     let str: string;
@@ -76,11 +82,11 @@ export const ControlArea = (props: {code: string}) => {
                                     )
                                 })
                             }
-                        </>
+                        </div>
                     }
                     {
                         tab === 'Documentation' &&
-                        <div className='documentation'>
+                        <div id='documentation'>
                             The docs:
                             <p>
                                 Elevator:
@@ -92,7 +98,7 @@ export const ControlArea = (props: {code: string}) => {
                     }
                     {
                         tab === 'Results' &&
-                        <div className='results'>
+                        <div id='results'>
                             <p id='title'> 
                                 Level: {level + 1} <span id='nickname'>{levels[level].nickname ? `("${levels[level].nickname}")` : ''}</span>
                             </p>
@@ -101,11 +107,14 @@ export const ControlArea = (props: {code: string}) => {
                                 Pass Time: {levels[level].passTime}s
                             </p>
 
-                            <p>
-                                Time: {time?.toFixed(2) || "0.00"}
-                            </p>
-
-                            <br />
+                            <div id="status">
+                                <p>
+                                    <span>Time:</span> {time.toFixed(2)}
+                                </p>
+                                <p>
+                                    <span>Remaining</span> {levels[level].people.length}
+                                </p>
+                            </div>
 
                             <button onClick={() => {
                                 setLevel(level - 1);
@@ -128,7 +137,7 @@ export const ControlArea = (props: {code: string}) => {
                 <div className='container'>
                     <button id='run-button' disabled={running} onClick={async () => {
                         engine.resetLevel();
-                        await delay(500);
+                        await sleep(250);
                         clearLogMessages();
                         engine.executeUserCode(props.code, (msg: any) => {
                             addLogMessage(msg);

@@ -2,13 +2,17 @@
     flex: 6;
     width: 100%;
     border-top: 5px solid black;
+
     display: flex;
     flex-direction: column;
 
     .info-region {
         flex: 7;
 
-        .tabs {
+        display: flex;
+        flex-direction: column;
+
+        .navbar {
             padding: 6px;
             background-color: rgb(37, 37, 39);
             border-bottom: 2px solid #333;
@@ -37,57 +41,78 @@
 
         .tab {
             overflow-y: scroll;
+            height: 300px;
+
             background-color:rgb(49, 49, 53);
             color: #eee;
-            height: 300px;
-            padding: 5px;
-            
-            .console-line {
-                font-family: 'Monaco';
-                margin: 0;
-                font-size: 15px;
-                color: #ddd;
+            padding: 8px;
+
+
+            #console {
+                .console-line {
+                    font-family: 'Monaco';
+                    margin: 0;
+                    font-size: 15px;
+                    color: #ddd;
+                }
             }
 
-            .results {
+            #results {
                 #title {
                     font-weight: bold;
                     margin: 0;
+                    font-size: 1.4rem;
                 }
 
                 #nickname {
                     font-style: italic;
                     font-weight: normal;
-                    font-size: 0.8rem;
+                    opacity: 0.9;
+                    font-size: 0.75em;
                 }
 
                 #pass-time {
                     font-style: italic;
-                    font-size: 0.8rem;
+                    font-size: 1rem;
                     margin: 0;
                     color: #ccc;
+                }
+
+                #status {
+                    margin: 20px 30px;
+                    padding: 16px;
+                    border-radius: 10px;
+                    background: linear-gradient(to bottom right, rgb(52, 63, 67), rgb(33, 44, 44));
+
+                    p {
+                        span {
+                            font-weight: bold;
+                        }
+
+                        margin: 0;
+                        color: #ccc;
+                    }
                 }
             }
         }
     }
-
 
     .run-bar {
         flex: 1;
         border-top: 1px solid black;
         background-color: rgb(87, 87, 97);
         padding: 4px;
-
+        
         .container {
             background-color: rgb(37, 37, 39);
             border-radius: 8px;
-            width: 100%;
             height: 100%;
             border: 1px solid #333;
-
+            
             display: flex;
             flex-direction: row;
             align-items: center;
+            flex-wrap: wrap;
 
             padding: 0px 10px;
 

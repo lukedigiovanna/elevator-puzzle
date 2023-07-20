@@ -1,8 +1,9 @@
 import { Building } from "./elevators";
 import { BuildingCodeWrapper, ElevatorCodeWrapper } from "./codeWrapper";
 import stickFigureSrc from "../assets/stickman.png";
-import { Level, level1, level2 } from "./levels";
+import { Level } from "./levels";
 import { CustomContext, makeCustomContext } from "./customContext";
+import { sleep } from "../utils/timeutils";
 
 const STICK_FIGURE = new Image();
 STICK_FIGURE.src = stickFigureSrc;
@@ -40,7 +41,6 @@ class Engine {
     constructor() {
         this.loop = this.loop.bind(this);
         this.building = null;
-        this.loadLevel(level2);
     }
 
     loadLevel(level: Level) {
@@ -88,7 +88,15 @@ class Engine {
         const addAwaits = code.replaceAll('elevator.goto(', 'await elevator.goto(');
         
         // Then between each line we can add a check for if we should terminate
-        const addTerminationChecks = addAwaits.replaceAll('\n', "\nif (__status.shouldTerminate) { __status.setRunning(false); return; }\n");
+        const addTerminationChecks = addAwaits.replaceAll(
+            '\n', 
+            `
+            await sleep(0);
+            if (__status.shouldTerminate) { 
+                __status.setRunning(false); 
+                return; 
+            }
+            `);
 
         const surroundAsync = `(async () => {
             try {
@@ -101,10 +109,10 @@ class Engine {
             __status.setRunning(false);
         })();`;
 
-        const func = new Function('elevator', 'building', 'log', '__status', surroundAsync);
+        const func = new Function('elevator', 'building', 'log', 'sleep', '__status', surroundAsync);
         const elevatorCW = new ElevatorCodeWrapper(this.building.elevators[0], this.statusObject);
         const buildingCW = new BuildingCodeWrapper(this.building, this.statusObject);
-        func(elevatorCW, buildingCW, logCallback, this.statusObject);
+        func(elevatorCW, buildingCW, logCallback, sleep, this.statusObject);
     }
 
     /**

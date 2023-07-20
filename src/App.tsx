@@ -4,12 +4,31 @@ import { ControlArea } from './components/ControlArea';
 import React from 'react';
 
 function App() {
+  const setInputSize = () => {
+    const inputCol = document.getElementById('input-column');
+    const canvas = document.getElementById('canvas');
+
+    if (inputCol && canvas) {
+      inputCol.style.width = `${window.innerWidth - canvas?.clientWidth}px`
+    }
+  }
+  
+  React.useEffect(() => {
+    window.onresize = () => {
+      setInputSize();
+    }
+
+    setInputSize();
+  }, [])
+
   const [code, setCode] = React.useState<string>("");
 
   return (
     <div className='app-row'>
-      <Canvas />
-      <div className='app-col'>
+      <div id='canvas'>
+        <Canvas />
+      </div>
+      <div id='input-column'>
         <div className='editor'>
           <Editor 
             height="100%" 
