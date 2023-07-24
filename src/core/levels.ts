@@ -81,12 +81,39 @@ const level3: Level = {
         }
     ],
     passTime: 60
+};
+
+const impossible: Level = {
+    nickname: "Impossible",
+    buildingHeight: 50,
+    elevators: [
+        {
+            capacity: 1,
+            speed: 10
+        }
+    ],
+    passTime: 10,
+    people: [
+        {
+            start: 0,
+            end: 49
+        },
+        {
+            start: 0,
+            end: 49
+        },
+        {
+            start: 0,
+            end: 49
+        }
+    ]
 }
 
 const levels = [
     level1,
     level2,
-    level3
+    level3,
+    impossible
 ];
 
 export type { Level };

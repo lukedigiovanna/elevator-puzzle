@@ -107,12 +107,12 @@ export const ControlArea = (props: {code: string}) => {
                                 Pass Time: {levels[level].passTime}s
                             </p>
 
-                            <div id="status">
+                            <div id='status'>
                                 <p>
-                                    <span>Time:</span> {time.toFixed(2)}
+                                    <span className='title'>Time:</span> <span className={time >= levels[level].passTime ? 'over-time' : ''}>{time.toFixed(2)}</span>
                                 </p>
                                 <p>
-                                    <span>Remaining</span> {levels[level].people.length}
+                                    <span className='title'>Remaining:</span> {levels[level].people.length}
                                 </p>
                             </div>
 

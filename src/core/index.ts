@@ -13,6 +13,8 @@ interface EngineObserver {
     setRunning: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
+const MAX_TIME_PER_ITERATION = 0.05;
+
 class Engine {
     private canvas: HTMLCanvasElement | null = null;
     private ctx: CustomContext | null = null;
@@ -123,6 +125,8 @@ class Engine {
         this.stopLoop();
         this.canvas = canvas;
         this.ctx = makeCustomContext(this.canvas.getContext("2d") as CanvasRenderingContext2D);
+
+        console.log("set canvas");
 
         this.canvas.addEventListener("wheel", (ev) => {
             this.y = Math.max(this.y - ev.deltaY, 0);
@@ -275,8 +279,8 @@ class Engine {
                     ctx.drawImage(STICK_FIGURE, px, py, personWidth, personHeight);
                     ctx.fillStyle = '#ddd';
                     ctx.strokeStyle = '#111';
-                    ctx.fillText(`${person.targetLevel}`, px + personWidth / 2, py - 2);
-                    ctx.strokeText(`${person.targetLevel}`, px + personWidth / 2, py - 2);
+                    ctx.fillText(`${person.targetLevel}`, px + personWidth / 2 + 4, py - 2);
+                    ctx.strokeText(`${person.targetLevel}`, px + personWidth / 2 + 4, py - 2);
 
                     if (person.currentLevel < person.targetLevel) {
                         ctx.fillStyle = 'green';
@@ -317,20 +321,25 @@ class Engine {
         const timeNow = Date.now();
         let dt = 0;
         if (this.timeLastFrame) {
-            dt = (timeNow - this.timeLastFrame) / 1000.0 * Math.pow(2, this.speed - 1);
+            // dt = (timeNow - this.timeLastFrame) / 1000.0 * Math.pow(2, this.speed - 1);
+            dt = Math.min((timeNow - this.timeLastFrame) / 1000.0, MAX_TIME_PER_ITERATION);
         }
         this.timeLastFrame = timeNow;
 
+        const iterations = Math.floor(Math.pow(2, this.speed - 1));
+
         if (this.statusObject.runningCode) {
-            this.elapsedTime += dt;
+            this.elapsedTime += dt * iterations;
             this.observer?.setTime(this.elapsedTime);
         }
         else {
             dt = 0;
         }
 
-        if (this.building)
-            this.building.update(dt);
+        if (this.building) {
+            for (let i = 0; i < iterations; i++)
+                this.building.update(dt);
+        }
 
         // Draw the background
         this.ctx.fillStyle = 'rgb(230, 230, 230)';

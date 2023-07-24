@@ -85,12 +85,17 @@
                     background: linear-gradient(to bottom right, rgb(52, 63, 67), rgb(33, 44, 44));
 
                     p {
-                        span {
+                        .title {
                             font-weight: bold;
                         }
 
                         margin: 0;
                         color: #ccc;
+                    }
+
+                    .over-time {
+                        color: rgb(168, 0, 0);
+                        font-weight: bold;
                     }
                 }
             }

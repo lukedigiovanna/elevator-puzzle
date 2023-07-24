@@ -11,7 +11,7 @@ const Canvas = () => {
             renderer.startLoop();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [canvasRef])
+    }, [])
 
     return  (
         <canvas ref={canvasRef} className='main-canvas' width={1300} height={1500} />
