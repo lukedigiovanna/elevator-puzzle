@@ -33,7 +33,7 @@ function App() {
         <div className='editor'>
           <Editor 
             height="100%" 
-            defaultLanguage='json' 
+            defaultLanguage='javascript' 
             value={code} 
             onChange={(value: string | undefined) => {
               setCode(value ? value : "");
@@ -44,11 +44,17 @@ function App() {
               },
               fontSize: 12,
               wordWrap: "on",
+              suggest: {
+                showKeywords: false
+              }
             }}
             onMount={(editor, monaco: Monaco) => {
-              console.log('editorDidMount', editor);
               editor.focus();
-              monaco.languages.registerCompletionItemProvider("json", {
+              monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+                noLib: true,
+                allowNonTsExtensions: true
+              });
+              monaco.languages.registerCompletionItemProvider('javascript', {
                 provideCompletionItems: createCompletionFunction(monaco)
               });
             }}

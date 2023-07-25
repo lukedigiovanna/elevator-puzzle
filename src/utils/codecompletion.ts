@@ -1,62 +1,43 @@
 import { Monaco } from "@monaco-editor/react";
 
-function createProposals(monaco: Monaco, range: any) {
-	// returning a static list of proposals, not even looking at the prefix (filtering is done by the Monaco editor),
-	// here you could do a server side lookup
+function createVariableProposals(monaco: Monaco, range: any) {
 	return [
 		{
-			label: '"lodash"',
-			kind: monaco.languages.CompletionItemKind.Function,
-			documentation: "The Lodash library exported as Node.js modules.",
-			insertText: '"lodash": "*"',
-			range: range,
+			label: 'elevator',
+			kind: monaco.languages.CompletionItemKind.Variable,
+			documentation: 'Control elevator',
+			insertText: 'elevator',
+			range
 		},
-		{
-			label: '"express"',
-			kind: monaco.languages.CompletionItemKind.Function,
-			documentation: "Fast, unopinionated, minimalist web framework",
-			insertText: '"express": "*"',
-			range: range,
-		},
-		{
-			label: '"mkdirp"',
-			kind: monaco.languages.CompletionItemKind.Function,
-			documentation: "Recursively mkdir, like <code>mkdir -p</code>",
-			insertText: '"mkdirp": "*"',
-			range: range,
-		},
-		{
-			label: '"my-third-party-library"',
-			kind: monaco.languages.CompletionItemKind.Function,
-			documentation: "Describe your library here",
-			insertText: '"${1:my-third-party-library}": "${2:1.2.3}"',
-			insertTextRules:
-				monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-			range: range,
-		},
+        {
+            label: 'building',
+            kind: monaco.languages.CompletionItemKind.Variable,
+            documentation: 'Get building information',
+            insertText: 'building',
+            range
+        }
 	];
+}
+
+function createElevatorFunctionProposals(monaco: Monaco, range: any) {
+    return [
+        {
+            label: 'goto',
+            kind: monaco.languages.CompletionItemKind.Method,
+            documentation: 'Send elevator to given level',
+            insertText: 'goto()',
+            range
+        }
+    ]
 }
 
 
 function createCompletionFunction(monaco: Monaco) {
     return function(model: any, position: any) {
-        // find out if we are completing a property in the 'dependencies' object.
-        var textUntilPosition = model.getValueInRange({
-            startLineNumber: 1,
-            startColumn: 1,
-            endLineNumber: position.lineNumber,
-            endColumn: position.column,
-        });
-
-        var match = textUntilPosition.match(
-            /"dependencies"\s*:\s*\{\s*("[^"]*"\s*:\s*"[^"]*"\s*,\s*)*([^"]*)?$/
-        );
+        const word = model.getWordUntilPosition(position);
+        const lineContent = model.getLineContent(position.lineNumber) as string;
+        console.log(lineContent);
         
-        if (!match) {
-            return { suggestions: [] };
-        }
-
-        var word = model.getWordUntilPosition(position);
         var range = {
             startLineNumber: position.lineNumber,
             endLineNumber: position.lineNumber,
@@ -64,8 +45,14 @@ function createCompletionFunction(monaco: Monaco) {
             endColumn: word.endColumn,
         };
 
+		if (lineContent.endsWith('elevator.')) {
+			return { 
+                suggestions: createElevatorFunctionProposals(monaco, range)
+            };
+		}
+
         return {
-            suggestions: createProposals(monaco, range),
+            suggestions: [...createVariableProposals(monaco, range), ...createElevatorFunctionProposals(monaco, range)]
         };   
     }
 }
