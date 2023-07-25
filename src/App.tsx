@@ -1,7 +1,8 @@
-import { Editor } from '@monaco-editor/react';
+import { Editor, Monaco } from '@monaco-editor/react';
 import { Canvas } from './components/Canvas';
 import { ControlArea } from './components/ControlArea';
 import React from 'react';
+import { createCompletionFunction } from './utils/codecompletion';
 
 function App() {
   const setInputSize = () => {
@@ -21,7 +22,7 @@ function App() {
     setInputSize();
   }, [])
 
-  const [code, setCode] = React.useState<string>("");
+  const [code, setCode] = React.useState<string>("// write your code here");
 
   return (
     <div className='app-row'>
@@ -32,8 +33,8 @@ function App() {
         <div className='editor'>
           <Editor 
             height="100%" 
-            defaultLanguage='javascript' 
-            value={"// write your code here"} 
+            defaultLanguage='json' 
+            value={code} 
             onChange={(value: string | undefined) => {
               setCode(value ? value : "");
             }}
@@ -43,6 +44,13 @@ function App() {
               },
               fontSize: 12,
               wordWrap: "on",
+            }}
+            onMount={(editor, monaco: Monaco) => {
+              console.log('editorDidMount', editor);
+              editor.focus();
+              monaco.languages.registerCompletionItemProvider("json", {
+                provideCompletionItems: createCompletionFunction(monaco)
+              });
             }}
             theme="vs-dark"
           />

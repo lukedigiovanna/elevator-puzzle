@@ -81,40 +81,56 @@ class Engine {
             throw new Error("Cannot exceute user code when no building is loaded in");
         }
 
-        this.statusObject.shouldTerminate = false;
-        this.statusObject.setRunning(true);
+        const worker = new Worker('./codeRunnerWorker.js');
+
+        worker.postMessage(code);
+
+        worker.onmessage = (e: any) => {
+            const {action, args} = e.data;
+
+            console.log(action, args);
+
+            switch (action) {
+                case 'log':
+                    logCallback(args[0]);
+                    break;
+            }
+        }
+
+        // this.statusObject.shouldTerminate = false;
+        // this.statusObject.setRunning(true);
         
-        this.elapsedTime = 0.0;
-        this.observer?.setTime(this.elapsedTime);
+        // this.elapsedTime = 0.0;
+        // this.observer?.setTime(this.elapsedTime);
 
-        const addAwaits = code.replaceAll('elevator.goto(', 'await elevator.goto(');
+        // const addAwaits = code.replaceAll('elevator.goto(', 'await elevator.goto(');
         
-        // Then between each line we can add a check for if we should terminate
-        const addTerminationChecks = addAwaits.replaceAll(
-            '\n', 
-            `
-            await sleep(0);
-            if (__status.shouldTerminate) { 
-                __status.setRunning(false); 
-                return; 
-            }
-            `);
+        // // Then between each line we can add a check for if we should terminate
+        // const addTerminationChecks = addAwaits.replaceAll(
+        //     '\n', 
+        //     `
+        //     await sleep(0);
+        //     if (__status.shouldTerminate) { 
+        //         __status.setRunning(false); 
+        //         return; 
+        //     }
+        //     `);
 
-        const surroundAsync = `(async () => {
-            try {
-                ${addTerminationChecks}
-            }
-            catch (err) {
-                log(err);
-                console.log(err);
-            }
-            __status.setRunning(false);
-        })();`;
+        // const surroundAsync = `(async () => {
+        //     try {
+        //         ${addTerminationChecks}
+        //     }
+        //     catch (err) {
+        //         log(err);
+        //         console.log(err);
+        //     }
+        //     __status.setRunning(false);
+        // })();`;
 
-        const func = new Function('elevator', 'building', 'log', 'sleep', '__status', surroundAsync);
-        const elevatorCW = new ElevatorCodeWrapper(this.building.elevators[0], this.statusObject);
-        const buildingCW = new BuildingCodeWrapper(this.building, this.statusObject);
-        func(elevatorCW, buildingCW, logCallback, sleep, this.statusObject);
+        // const func = new Function('elevator', 'building', 'log', 'sleep', '__status', surroundAsync);
+        // const elevatorCW = new ElevatorCodeWrapper(this.building.elevators[0], this.statusObject);
+        // const buildingCW = new BuildingCodeWrapper(this.building, this.statusObject);
+        // func(elevatorCW, buildingCW, logCallback, sleep, this.statusObject);
     }
 
     /**

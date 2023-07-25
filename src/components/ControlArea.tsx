@@ -11,8 +11,11 @@ const MAX_LOG_MESSAGES = 250;
 
 export const ControlArea = (props: {code: string}) => {
     const [reactLogMessages, setReactLogMessages] = React.useState<any[]>([]);
-    const logMessages: any[] = [];
+    const logMessages: string[] = [];
     const addLogMessage = (msg: any) => {
+        if (typeof msg !== 'string') {
+            msg = JSON.stringify(msg);
+        }
         logMessages.push(msg);
         if (logMessages.length > MAX_LOG_MESSAGES) {
             logMessages.shift();
