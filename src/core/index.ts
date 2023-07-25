@@ -29,7 +29,6 @@ class Engine {
     private level: Level | null = null;
 
     private statusObject = {
-        shouldTerminate: false,
         runningCode: false,
         setRunning: (val: boolean) => {
             this.statusObject.runningCode = val;
@@ -40,9 +39,13 @@ class Engine {
 
     private observer: EngineObserver | null = null;
 
+    private codeRunnerWorker: Worker;
+
     constructor() {
         this.loop = this.loop.bind(this);
         this.building = null;
+        
+        this.codeRunnerWorker = new Worker('./codeRunnerWorker.js');
     }
 
     loadLevel(level: Level) {
@@ -72,7 +75,7 @@ class Engine {
     }
 
     stopCode() {
-        this.statusObject.shouldTerminate = true;
+        this.codeRunnerWorker.terminate();
         this.statusObject.setRunning(false);
     }
 
@@ -81,21 +84,47 @@ class Engine {
             throw new Error("Cannot exceute user code when no building is loaded in");
         }
 
-        const worker = new Worker('./codeRunnerWorker.js');
+        this.codeRunnerWorker = new Worker('./codeRunnerWorker.js');
 
-        worker.postMessage(code);
+        this.codeRunnerWorker.onmessage = (e: any) => {
+            if (!this.building) {
+                throw new Error("Cannot execute messages on an undefined building");
+            }
 
-        worker.onmessage = (e: any) => {
-            const {action, args} = e.data;
+            const {action, data} = e.data;
 
-            console.log(action, args);
+            console.log(action, data);
 
             switch (action) {
                 case 'log':
-                    logCallback(args[0]);
+                    logCallback(data.message);
                     break;
+                case 'elevator-goto':
+                    const { elevatorNumber, destination } = data;
+                    console.log(`goto ${destination}`)
+                    const elevator = this.building.elevators[elevatorNumber];
+                    elevator.targetLevel = destination;
+                    elevator.onLand = () => {
+                        console.log('landed');
+                        this.codeRunnerWorker.postMessage({
+                            type: 'elevator-landed',
+                            value: {
+
+                            }
+                        })
+                    }
+                    break;
+                case 'terminate':
+                    this.statusObject.setRunning(false);
             }
         }
+
+        this.codeRunnerWorker.postMessage({
+            action: 'execute-code',
+            value: code
+        });
+
+        this.statusObject.setRunning(true);
 
         // this.statusObject.shouldTerminate = false;
         // this.statusObject.setRunning(true);

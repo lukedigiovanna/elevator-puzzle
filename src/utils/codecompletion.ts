@@ -15,6 +15,13 @@ function createVariableProposals(monaco: Monaco, range: any) {
             documentation: 'Get building information',
             insertText: 'building',
             range
+        },
+        {
+            label: 'log',
+            kind: monaco.languages.CompletionItemKind.Function,
+            documentation: 'Log a message to the console',
+            insertText: 'log',
+            range
         }
 	];
 }
